@@ -65,5 +65,4 @@ research-paper-summarizer/
 
 ## Notes
 
-- The `__pycache__/` directory is ignored by git.
 - Make sure your PDF files are not encrypted or scanned images (text extraction works on text-based PDFs).
