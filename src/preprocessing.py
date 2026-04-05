@@ -1,5 +1,3 @@
-import pdfplumber
-import spacy
 import re
 
 def clean_text(text):
