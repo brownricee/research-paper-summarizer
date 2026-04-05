@@ -1,5 +1,6 @@
 import pdfplumber
 from src.preprocessing import clean_text
+from src.preprocessing import detect_sections
 
 def getTextFromPDF(pdf_path):
   text = ""
@@ -10,6 +11,8 @@ def getTextFromPDF(pdf_path):
         text += page_text
   except FileNotFoundError:
     print("The file you tried to provide does not exist.")
+
+  sections = detect_sections(text)
 
   cleaned_text = clean_text(text)
 
