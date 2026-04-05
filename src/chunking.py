@@ -13,13 +13,13 @@ def chunk_text(text, sentences_per_chunk=5):
     subprocess.check_call([sys.executable, "-m", "spacy", "download", "en_core_web_sm"])
     nlp = spacy.load("en_core_web_sm")
 
-    doc = nlp(text)
-    sentences = [sent.text for sent in doc.sents]
-    chunks = []
+  doc = nlp(text)
+  sentences = [sent.text for sent in doc.sents]
+  chunks = []
 
-    for i in range(0, len(sentences), sentences_per_chunk):
-        # slices the sentences so we have 5 per chunk
-        chunk = " ".join(sentences[i:i + sentences_per_chunk])
-        chunks.append(chunk)
+  for i in range(0, len(sentences), sentences_per_chunk):
+      # slices the sentences so we have 5 per chunk
+      chunk = " ".join(sentences[i:i + sentences_per_chunk])
+      chunks.append(chunk)
 
-    return chunks
+  return chunks
