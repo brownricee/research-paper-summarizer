@@ -13,7 +13,6 @@ def chunk_text(sections, sentences_per_chunk=5):
     subprocess.check_call([sys.executable, "-m", "spacy", "download", "en_core_web_sm"])
     nlp = spacy.load("en_core_web_sm")
 
-
   all_chunks = []
 
   for section, content in sections.items():
