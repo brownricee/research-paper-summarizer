@@ -14,6 +14,8 @@ def getTextFromPDF(pdf_path):
 
   sections = detect_sections(text)
 
-  cleaned_text = clean_text(text)
+  for key, value in sections.items():
+    value = clean_text(value)
+    sections[key] = value
 
-  return cleaned_text
+  return sections
