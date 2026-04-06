@@ -18,24 +18,37 @@ def clean_text(text):
     text = re.sub(r'(\d)([A-Za-z])', r'\1 \2', text)
     text = re.sub(r'([A-Za-z])(\d)', r'\1 \2', text)
 
+    text = re.sub(r'-\n\s*', '', text)
     text = text.replace("\n", " ")
-    text = re.sub(r'-\s+', '', text)
     text = " ".join(text.split())
 
-    # saves everything mentioned before references section of the pdf
-    text = re.split(r'references|bibliography', text, flags=re.IGNORECASE)[0]
     text = text.lower()
 
     # fix fully merged lowercase words using wordninja
     words = text.split()
-    words = [" ".join(wordninja.split(w)) if len(w) > 20 else w for w in words]
+    words = [" ".join(wordninja.split(w)) if len(w) > 15 else w for w in words]
     text = " ".join(words)
 
     # filter out garbled sentences
-    sentences = text.split('. ')
+    sentences = re.split(r'(?<=[.!?])\s+', text)
     text = '. '.join(s for s in sentences if not is_mostly_garbled(s))
 
     text = re.sub(r'[^\w\s\.-]', '', text)
+
+    # filter reversed words from figure visualizations
+    words = text.split()
+    filtered = []
+    for w in words:
+        if len(w) > 3:
+            rev = w[::-1]
+            # if the reversed version splits into fewer pieces, it's a backwards word
+            if len(wordninja.split(rev)) < len(wordninja.split(w)):
+                continue
+        filtered.append(w)
+    text = " ".join(filtered)
+
+    text = re.sub(r'\b[a-z]\b', '', text)
+    text = " ".join(text.split())
 
     return text
 
