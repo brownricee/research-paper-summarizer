@@ -28,6 +28,10 @@ def detect_sections(text):
         if re.match(pattern, part, flags=re.IGNORECASE):
             current_section = part.strip().lower()
         else:
-            sections[current_section] = part.strip()
+            if part.strip():
+                sections[current_section] = part.strip()
     
+    if list(sections.keys()) == ["preamble"]:
+        print("Warning: no sections detected, processing as single document.")
+
     return sections
