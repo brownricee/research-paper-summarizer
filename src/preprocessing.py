@@ -1,6 +1,17 @@
 import re
+import wordninja
 
 def clean_text(text):
+
+    # any lowercase letters immediately followed by
+    # capital letters have spaces inserted between them
+    text = re.sub(r'([a-z])([A-Z])', r'\1 \2', text)
+
+    text = re.sub(r'([.!?])([A-Za-z])', r'\1 \2', text)
+
+    text = re.sub(r'(\d)([A-Za-z])', r'\1 \2', text)
+    text = re.sub(r'([A-Za-z])(\d)', r'\1 \2', text)
+
     text = text.replace("\n", " ")
 
     text = re.sub(r'-\s+', '', text)
@@ -11,6 +22,12 @@ def clean_text(text):
     text = re.split(r'references|bibliography', text, flags=re.IGNORECASE)[0]
 
     text = text.lower()
+
+    # fix fully merged lowercase words using wordninja
+    words = text.split()
+    words = [" ".join(wordninja.split(w)) if len(w) > 20 else w for w in words]
+    text = " ".join(words)
+
     text = re.sub(r'[^\w\s\.-]', '', text)
 
     return text
@@ -34,4 +51,5 @@ def detect_sections(text):
     if list(sections.keys()) == ["preamble"]:
         print("Warning: no sections detected, processing as single document.")
 
+    print(sections)
     return sections
