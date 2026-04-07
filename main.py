@@ -5,9 +5,10 @@ from src.extraction import getTextFromPDF
 from src.chunking import chunk_text
 from src.ranking import rank_chunks
 from src.summarization import summarize_chunks
+from src.aggregation import aggregate_summary
 
 def main():
-    pdf_path = "C:\\Users\\ryaan\\OneDrive\\Desktop\\paper-summarizer\\example_research_paper.pdf"
+    pdf_path = "C:\\Users\\ryaan\\OneDrive\\Desktop\\paper-summarizer\\attention_research_paper.pdf"
 
     sections = getTextFromPDF(pdf_path)
 
@@ -15,9 +16,11 @@ def main():
 
     ranked_chunks = rank_chunks(chunks)
 
-    summary = summarize_chunks(ranked_chunks)
+    chunk_summaries = summarize_chunks(ranked_chunks)
 
-    print(summary)
+    final_summary = aggregate_summary(chunk_summaries)
+
+    print(final_summary)
 
 
 
