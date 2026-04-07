@@ -22,8 +22,6 @@ def clean_text(text):
     text = text.replace("\n", " ")
     text = " ".join(text.split())
 
-    text = text.lower()
-
     # fix fully merged lowercase words using wordninja
     words = text.split()
     words = [" ".join(wordninja.split(w)) if len(w) > 15 else w for w in words]
