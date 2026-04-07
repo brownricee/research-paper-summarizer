@@ -1,7 +1,7 @@
 from transformers import pipeline
 
 
-summarizer = pipeline("summarization", model="facebook/bart-large-cnn")
+summarizer = pipeline("summarization", model="sshleifer/distilbart-cnn-12-6")
 
 def summarize_chunks(ranked_chunks, top_n=5):
     summary = ""
