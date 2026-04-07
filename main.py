@@ -1,7 +1,3 @@
-import torch
-import numpy as np
-import matplotlib as plt
-
 from src.extraction import getTextFromPDF
 from src.chunking import chunk_text
 from src.ranking import rank_chunks
@@ -15,6 +11,10 @@ def main():
     chunks = chunk_text(sections)
 
     ranked_chunks = rank_chunks(chunks)
+
+    summary = summarize_chunks(ranked_chunks)
+
+    print(summary)
 
 
 
