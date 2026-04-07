@@ -1,3 +1,6 @@
+import os
+os.environ["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "1"
+
 from src.extraction import getTextFromPDF
 from src.chunking import chunk_text
 from src.ranking import rank_chunks
