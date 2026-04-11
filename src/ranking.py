@@ -4,9 +4,16 @@ import numpy as np
 
 from src.config import EMBEDDING_MODEL
 
-model = SentenceTransformer(EMBEDDING_MODEL)
+_model = None # private module-level cache, starts empty
+
+def get_model():
+    global _model
+    if _model is None:
+        _model = SentenceTransformer(EMBEDDING_MODEL)
+    return _model
 
 def rank_chunks(chunks):
+    model = get_model()
     texts = [chunk["text"] for chunk in chunks]
     embeddings = model.encode(texts)
 

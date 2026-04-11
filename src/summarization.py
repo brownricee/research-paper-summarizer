@@ -8,11 +8,18 @@ from src.config import (
     SUMMARY_MIN_LENGTH,
 )
 
-summarizer = pipeline("summarization", model=SUMMARIZER_MODEL)
+_summarizer = None
+
+def get_summarizer():
+    global _summarizer
+    if _summarizer is None:
+        _summarizer = pipeline("summarization", model=SUMMARIZER_MODEL)
+    return _summarizer
 
 def summarize_chunks(ranked_chunks, top_n=TOP_N_CHUNKS):
     summary = ""
     seen_texts = []
+    summarizer = get_summarizer()
 
     for i in range(min(top_n, len(ranked_chunks))):
         text = ranked_chunks[i]["text"]
