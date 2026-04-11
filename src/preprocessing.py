@@ -52,7 +52,7 @@ def clean_text(text):
 
 def detect_sections(text):
     # regex pattern to detect common sections in research papers, with optional numbering
-    pattern = r'((?:\d+[\.\d]*\s+)?(?:abstract|introduction|related work|methodology|methods|results|discussion|conclusion))'
+    pattern = r'((?:\d+[\.\d]*\s+)?(?:abstract|introduction|related work|methodology|methods|results|discussion|conclusion|references|bibliography))'
 
     parts = re.split(pattern, text, flags=re.IGNORECASE)
 
@@ -61,6 +61,7 @@ def detect_sections(text):
 
     for part in parts:
         if re.match(pattern, part, flags=re.IGNORECASE):
+            part = re.sub(r'^\d+[\.\d]*\s+', '', part)
             current_section = part.strip().lower()
         else:
             if part.strip():

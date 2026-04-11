@@ -21,10 +21,10 @@ def getTextFromPDF(pdf_path):
   except FileNotFoundError:
     print("The file you tried to provide does not exist.")
 
-  # strip references/bibliography before section detection
-  text = re.split(r'\nreferences\s*\n|\nbibliography\s*\n', text, flags=re.IGNORECASE)[0]
-
+  # pop off references / bibliography sections after finishing
   sections = detect_sections(text)
+  sections.pop("references", None)
+  sections.pop("bibliography", None)
 
   for key, value in sections.items():
     value = clean_text(value)
