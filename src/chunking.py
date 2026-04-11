@@ -5,15 +5,22 @@ import sys
 
 from src.config import SENTENCES_PER_CHUNK
 
+_nlp = None
+
+def get_nlp():
+  global _nlp
+  if _nlp is None:
+    try:
+      _nlp = spacy.load("en_core_web_sm")
+    except OSError:
+      print("Downloading spaCy model 'en_core_web_sm'...")
+      subprocess.check_call([sys.executable, "-m", "spacy", "download", "en_core_web_sm"])
+      _nlp = spacy.load("en_core_web_sm")
+  return _nlp
+
 
 def chunk_text(sections, sentences_per_chunk=SENTENCES_PER_CHUNK):
-  # Ensure en_core_web_sm is installed
-  try:
-    nlp = spacy.load("en_core_web_sm")
-  except OSError:
-    print("Downloading spaCy model 'en_core_web_sm'...")
-    subprocess.check_call([sys.executable, "-m", "spacy", "download", "en_core_web_sm"])
-    nlp = spacy.load("en_core_web_sm")
+  nlp = get_nlp()
 
   all_chunks = []
 
