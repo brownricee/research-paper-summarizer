@@ -65,7 +65,10 @@ def detect_sections(text):
             current_section = part.strip().lower()
         else:
             if part.strip():
-                sections[current_section] = part.strip()
+                if current_section in sections:
+                    sections[current_section] += " " + part.strip()
+                else:
+                    sections[current_section] = part.strip()
     
     if list(sections.keys()) == ["preamble"]:
         print("Warning: no sections detected, processing as single document.")

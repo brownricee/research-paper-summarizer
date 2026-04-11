@@ -18,7 +18,7 @@ def main():
 
     chunk_summaries = summarize_chunks(ranked_chunks)
 
-    final_summary = aggregate_summary(chunk_summaries)
+    final_summary = aggregate_summary(chunk_summaries, section_order=list(sections.keys()))
 
     print(final_summary)
 

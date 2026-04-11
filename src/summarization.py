@@ -44,9 +44,15 @@ def summarize_chunks(ranked_chunks, top_n=TOP_N_PER_SECTION):
 
             # Cap max_length to half the input token count so we don't exceed input length
             input_tokens = len(text.split())
-            max_len = min(SUMMARY_MAX_LENGTH, max(SUMMARY_MIN_LENGTH, input_tokens // 2))
+            max_len = min(SUMMARY_MAX_LENGTH, max(SUMMARY_MIN_LENGTH * 2, input_tokens // 2))
 
-            result = summarizer(text, max_length=max_len, min_length=min(20, max_len - 1), do_sample=False)
+            result = summarizer(
+                text,
+                max_length=max_len,
+                min_length=min(20, max_len - 1),
+                do_sample=False,
+                no_repeat_ngram_size=3,
+            )
             section_summary += result[0]["summary_text"]
             section_summary += "\n"
 

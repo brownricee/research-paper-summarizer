@@ -21,7 +21,12 @@ def getTextFromPDF(pdf_path):
   except FileNotFoundError:
     print("The file you tried to provide does not exist.")
 
-  # pop off references / bibliography sections after finishing
+  # Cut the raw text at the first References/Bibliography header so nothing
+  # after it ever enters section detection.
+  refs_match = re.search(r'\n\s*(references|bibliography)\s*\n', text, flags=re.IGNORECASE)
+  if refs_match:
+    text = text[:refs_match.start()]
+
   sections = detect_sections(text)
   sections.pop("references", None)
   sections.pop("bibliography", None)
