@@ -2,7 +2,9 @@ from sentence_transformers import SentenceTransformer
 from sklearn.metrics.pairwise import cosine_similarity
 import numpy as np
 
-model = SentenceTransformer('all-MiniLM-L6-v2')
+from src.config import EMBEDDING_MODEL
+
+model = SentenceTransformer(EMBEDDING_MODEL)
 
 def rank_chunks(chunks):
     texts = [chunk["text"] for chunk in chunks]

@@ -3,8 +3,10 @@ from spacy.util import is_package
 import subprocess
 import sys
 
+from src.config import SENTENCES_PER_CHUNK
 
-def chunk_text(sections, sentences_per_chunk=5):
+
+def chunk_text(sections, sentences_per_chunk=SENTENCES_PER_CHUNK):
   # Ensure en_core_web_sm is installed
   try:
     nlp = spacy.load("en_core_web_sm")

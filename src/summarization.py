@@ -1,9 +1,16 @@
 from transformers import pipeline
 
+from src.config import (
+    SUMMARIZER_MODEL,
+    TOP_N_CHUNKS,
+    MIN_CHUNK_CHARS,
+    SUMMARY_MAX_LENGTH,
+    SUMMARY_MIN_LENGTH,
+)
 
-summarizer = pipeline("summarization", model="sshleifer/distilbart-cnn-12-6")
+summarizer = pipeline("summarization", model=SUMMARIZER_MODEL)
 
-def summarize_chunks(ranked_chunks, top_n=5):
+def summarize_chunks(ranked_chunks, top_n=TOP_N_CHUNKS):
     summary = ""
     seen_texts = []
 
@@ -11,7 +18,7 @@ def summarize_chunks(ranked_chunks, top_n=5):
         text = ranked_chunks[i]["text"]
 
         # Skip chunks that are too short to summarize meaningfully
-        if len(text) < 50:
+        if len(text) < MIN_CHUNK_CHARS:
             continue
 
         # Skip chunks that are too similar to already-summarized ones
@@ -21,7 +28,7 @@ def summarize_chunks(ranked_chunks, top_n=5):
 
         # Cap max_length to half the input token count so we don't exceed input length
         input_tokens = len(text.split())
-        max_len = min(150, max(30, input_tokens // 2))
+        max_len = min(SUMMARY_MAX_LENGTH, max(SUMMARY_MIN_LENGTH, input_tokens // 2))
 
         result = summarizer(text, max_length=max_len, min_length=min(20, max_len - 1), do_sample=False)
         summary += result[0]["summary_text"]
