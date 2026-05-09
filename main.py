@@ -8,7 +8,7 @@ from src.summarization import summarize_chunks
 from src.aggregation import aggregate_summary
 
 def main():
-    pdf_path = "C:\\Users\\ryaan\\OneDrive\\Desktop\\paper-summarizer\\attention_research_paper.pdf"
+    pdf_path = "C:\\Users\\ryaan\\Desktop\\research-paper-summarizer\\attention_research_paper.pdf"
 
     sections = getTextFromPDF(pdf_path)
 

@@ -6,7 +6,6 @@ EMBEDDING_MODEL = "all-MiniLM-L6-v2"
 
 # Summarization
 SUMMARIZER_MODEL = "sshleifer/distilbart-cnn-12-6"
-TOP_N_CHUNKS = 5
 MIN_CHUNK_CHARS = 50
 SUMMARY_MAX_LENGTH = 150
 SUMMARY_MIN_LENGTH = 30
