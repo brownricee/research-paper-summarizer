@@ -3,7 +3,6 @@ from collections import defaultdict
 
 from src.config import (
     SUMMARIZER_MODEL,
-    TOP_N_CHUNKS,
     MIN_CHUNK_CHARS,
     SUMMARY_MAX_LENGTH,
     SUMMARY_MIN_LENGTH,
@@ -29,6 +28,8 @@ def summarize_chunks(ranked_chunks, top_n=TOP_N_PER_SECTION):
     for section_name, chunks_in_section in buckets.items():
         seen_texts = []
         section_summary = ""
+
+        chunks_in_section.sort(key=lambda chunk: chunk["score"], reverse=True)
 
         for i in range(min(top_n, len(chunks_in_section))):
             text = chunks_in_section[i]["text"]
