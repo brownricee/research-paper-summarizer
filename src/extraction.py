@@ -5,10 +5,13 @@ from src.preprocessing import detect_sections
 
 def getTextFromPDF(pdf_path):
   text = ""
+
   try:
     with pdfplumber.open(pdf_path) as pdf:
+      all_words = []
       for page in pdf.pages:
-        words = page.extract_words(x_tolerance=2, keep_blank_chars=True)
+        words = page.extract_words(x_tolerance=2, keep_blank_chars=True, extra_attrs=["fontname", "size"])
+        all_words.extend(words)
         # group words into lines by their vertical position
         lines = {}
         for w in words:
@@ -21,13 +24,14 @@ def getTextFromPDF(pdf_path):
   except FileNotFoundError:
     print("The file you tried to provide does not exist.")
 
+
   # Cut the raw text at the first References/Bibliography header so nothing
   # after it ever enters section detection.
   refs_match = re.search(r'\n\s*(references|bibliography)\s*\n', text, flags=re.IGNORECASE)
   if refs_match:
     text = text[:refs_match.start()]
-
-  sections = detect_sections(text)
+  
+  sections = detect_sections(text, all_words)
   sections.pop("references", None)
   sections.pop("bibliography", None)
 
