@@ -7,6 +7,8 @@ from src.config import (
     SUMMARY_MAX_LENGTH,
     SUMMARY_MIN_LENGTH,
     TOP_N_PER_SECTION,
+    AGGREGATE_MAX_LENGTH,
+    AGGREGATE_MIN_LENGTH,
 )
 
 _summarizer = None
@@ -15,7 +17,17 @@ def get_summarizer():
     global _summarizer
     if _summarizer is None:
         _summarizer = pipeline("summarization", model=SUMMARIZER_MODEL)
+        _summarizer.tokenizer.model_max_length = 1024
     return _summarizer
+
+def _clamp_lengths(text, max_cap, min_cap):
+    # Use the real input length so the output never asks for more
+    # tokens than the input has, and min_length never exceeds max_length.
+    tokenizer = get_summarizer().tokenizer
+    input_len = len(tokenizer.encode(text, truncation=True, max_length=1024))
+    max_len = min(max_cap, input_len)
+    min_len = min(min_cap, max_len)
+    return max_len, min_len
 
 def summarize_chunks(ranked_chunks, top_n=TOP_N_PER_SECTION):
     section_summaries = {}
@@ -43,16 +55,16 @@ def summarize_chunks(ranked_chunks, top_n=TOP_N_PER_SECTION):
                 continue
             seen_texts.append(text)
 
-            # Cap max_length to half the input token count so we don't exceed input length
-            input_tokens = len(text.split())
-            max_len = min(SUMMARY_MAX_LENGTH, max(SUMMARY_MIN_LENGTH * 2, input_tokens // 2))
+            max_len, min_len = _clamp_lengths(text, SUMMARY_MAX_LENGTH, SUMMARY_MIN_LENGTH)
 
             result = summarizer(
                 text,
                 max_length=max_len,
-                min_length=min(20, max_len - 1),
+                min_length=min_len,
                 do_sample=False,
                 no_repeat_ngram_size=3,
+                truncation=True,
+                num_beams=4,
             )
             section_summary += result[0]["summary_text"]
             section_summary += "\n"
@@ -60,3 +72,19 @@ def summarize_chunks(ranked_chunks, top_n=TOP_N_PER_SECTION):
         section_summaries[section_name] = section_summary
 
     return section_summaries
+
+
+def synthesize_summary(combined_text):
+    summarizer = get_summarizer()
+    max_len, min_len = _clamp_lengths(combined_text, AGGREGATE_MAX_LENGTH, AGGREGATE_MIN_LENGTH)
+    result = summarizer(
+        combined_text,
+        max_length=max_len,
+        min_length=min_len,
+        do_sample=False,
+        no_repeat_ngram_size=3,
+        truncation=True,
+        num_beams=4,
+    )
+
+    return result[0]["summary_text"]

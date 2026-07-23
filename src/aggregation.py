@@ -11,5 +11,5 @@ def aggregate_summary(section_summaries, section_order=None):
         if section_name not in section_summaries:
             continue
         summary = section_summaries[section_name]
-        output += f"## {section_name.title()}\n{summary}\n"
+        output += summary
     return output
