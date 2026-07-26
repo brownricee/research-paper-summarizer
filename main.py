@@ -19,11 +19,15 @@ def main():
 
     chunk_summaries = summarize_chunks(ranked_chunks)
 
-    combined_summary = aggregate_summary(chunk_summaries, section_order=list(sections.keys()))
+    body = aggregate_summary(chunk_summaries, section_order=list(sections.keys()), with_headers=True)
+    plain = aggregate_summary(chunk_summaries, section_order=list(sections.keys()), with_headers=False)
 
-    final_summary = synthesize_summary(combined_summary)
+    tldr = synthesize_summary(plain)
 
-    print(final_summary)
+    title = os.path.splitext(os.path.basename(pdf_path))[0].replace("_", " ").title()
+    document = f"# Summary: {title}\n\n## TL;DR\n{tldr}\n\n{body}"
+
+    print(document)
 
 
 

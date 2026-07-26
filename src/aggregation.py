@@ -1,4 +1,4 @@
-def aggregate_summary(section_summaries, section_order=None):
+def aggregate_summary(section_summaries, section_order=None, with_headers=False):
     if not section_summaries:
         return ""
 
@@ -11,5 +11,13 @@ def aggregate_summary(section_summaries, section_order=None):
         if section_name not in section_summaries:
             continue
         summary = section_summaries[section_name]
-        output += summary
-    return output
+        # skips headers that have no content
+        if not summary.strip():
+            continue
+
+        if with_headers:
+            output += f"## {section_name.title()}\n{summary.strip()}\n\n"
+        else:
+            output += summary
+
+    return output.strip()
