@@ -12,17 +12,27 @@ def main():
     pdf_path = "C:\\Users\\ryaan\\Desktop\\research-paper-summarizer\\attention_research_paper.pdf"
 
     sections = getTextFromPDF(pdf_path)
+    print("Text extracted..\n")
 
     chunks = chunk_text(sections)
+    print("Chunking text..\n")
 
     ranked_chunks = rank_chunks(chunks)
+    print("Ranking chunks..\n")
 
     chunk_summaries = summarize_chunks(ranked_chunks)
+    print("Summarizing..\n")
 
     body = aggregate_summary(chunk_summaries, section_order=list(sections.keys()), with_headers=True)
     plain = aggregate_summary(chunk_summaries, section_order=list(sections.keys()), with_headers=False)
-
-    tldr = synthesize_summary(plain)
+    
+    tldr = ""
+    if chunk_summaries.get("abstract"):
+        tldr = synthesize_summary(chunk_summaries["abstract"])
+    elif chunk_summaries.get("introduction"):
+        tldr = synthesize_summary(chunk_summaries["introduction"])
+    else:
+        tldr = synthesize_summary(plain)
 
     title = os.path.splitext(os.path.basename(pdf_path))[0].replace("_", " ").title()
     document = f"# Summary: {title}\n\n## TL;DR\n{tldr}\n\n{body}"

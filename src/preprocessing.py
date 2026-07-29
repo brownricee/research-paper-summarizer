@@ -11,7 +11,6 @@ def is_mostly_garbled(text, threshold=0.5):
     return garbled / len(words) > threshold
 
 def clean_text(text):
-
     # any lowercase letters immediately followed by
     # capital letters have spaces inserted between them
     text = re.sub(r'([a-z])([A-Z])', r'\1 \2', text)
@@ -19,7 +18,7 @@ def clean_text(text):
     text = re.sub(r'(\d)([A-Za-z])', r'\1 \2', text)
     text = re.sub(r'([A-Za-z])(\d)', r'\1 \2', text)
 
-    text = re.sub(r'-\n\s*', '', text)
+    text = re.sub(r'(\w+)-\s+(\w+)', _rejoin_hyphen, text)
     text = text.replace("\n", " ")
     text = " ".join(text.split())
 
@@ -30,7 +29,7 @@ def clean_text(text):
 
     # filter out garbled sentences
     sentences = re.split(r'(?<=[.!?])\s+', text)
-    text = " ".join(s for s in sentences if not is_mostly_garbled(s))
+    text = " ".join(s for s in sentences if not is_mostly_garbled(s) and not is_table_junk(s) and not has_contact_info(s))
 
     text = re.sub(r'[^\w\s\.,:%()-]', '', text)
 
@@ -52,10 +51,7 @@ def clean_text(text):
 
     return text
 
-
-
 def detect_sections(text, words=None):
-
     if not words:
         return detect_sections_by_regex(text)
 
@@ -92,7 +88,6 @@ def detect_sections(text, words=None):
     
     return sections
 
-
 def detect_sections_by_regex(text):
     pattern = r'((?:\d+[\.\d]*\s+)?(?:abstract|introduction|related work|methodology|methods|results|discussion|conclusion|references|bibliography))'
 
@@ -117,7 +112,6 @@ def detect_sections_by_regex(text):
 
     return sections
 
-
 def get_body_font_size(words):
     sizes = Counter()
 
@@ -130,12 +124,10 @@ def get_body_font_size(words):
         return None
     return sizes.most_common(1)[0][0]
 
-
 def is_bold(fontname):
     # pdfplumber fontnames embed the weight, e.g. "ABCDEF+NimbusRomNo9L-Medi"
     # or "...-Bold". Guard against None in case a word has no fontname.
     return bool(fontname) and "bold" in fontname.lower()
-
 
 def is_heading(line_words, body_size, max_heading_words=8, size_tolerance=0.5):
     if not line_words:
@@ -172,3 +164,33 @@ def is_heading(line_words, body_size, max_heading_words=8, size_tolerance=0.5):
 
     larger_than_body = bool(sizes) and max(sizes) >= body_size + size_tolerance
     return larger_than_body or line_bold
+
+def is_table_junk(sentence):
+    letters = sum(c.isalpha() for c in sentence)
+    non_letters = sum(c.isdigit() or (not c.isalnum() and not c.isspace()) for c in sentence)
+    ratio = non_letters / max(1, letters + non_letters)
+
+    # Used to drop sentences that mainly contain numbers that could confuse the summarization model
+    # later in the pipeline
+    return ratio > 0.3
+
+def has_contact_info(sentence):
+    # Checks for emails which is an @ sign, a dotted domain, or a space-split domain
+    if re.search(r'@|\.(?:com|edu|org|net)\b|\b\w+ (?:com|edu|org|net)\b', sentence, re.IGNORECASE):
+        return True
+
+    # Author/affiliation blocks get shredded into many 1-2 char tokens, so this check gets rid of that
+    tokens = sentence.split()
+    if tokens and sum(1 for t in tokens if len(t) <= 2) / len(tokens) > 0.5:
+        return True
+
+    return False
+
+def _rejoin_hyphen(m):
+    merged = m.group(1) + m.group(2)
+
+    # if word-ninja sees one word, return merged
+    if len(wordninja.split(merged)) == 1:
+        return merged
+    else:
+        return m.group(0)

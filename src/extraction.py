@@ -32,8 +32,12 @@ def getTextFromPDF(pdf_path):
     text = text[:refs_match.start()]
   
   sections = detect_sections(text, all_words)
+  sections.pop("preamble", None)
   sections.pop("references", None)
   sections.pop("bibliography", None)
+  for name in list(sections.keys()):
+    if re.search(r"acknowledg|appendix|author", name, flags=re.IGNORECASE):
+      del sections[name]
 
   for key, value in sections.items():
     value = clean_text(value)
