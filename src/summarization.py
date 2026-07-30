@@ -11,6 +11,7 @@ from src.config import (
     TOP_N_PER_SECTION,
     AGGREGATE_MAX_LENGTH,
     AGGREGATE_MIN_LENGTH,
+    NUM_BEAMS,
 )
 
 _summarizer = None
@@ -66,7 +67,7 @@ def summarize_chunks(ranked_chunks, top_n=TOP_N_PER_SECTION):
                 do_sample=False,
                 no_repeat_ngram_size=3,
                 truncation=True,
-                num_beams=4,
+                num_beams=NUM_BEAMS,
             )
             section_summary += result[0]["summary_text"]
             section_summary += "\n"
@@ -87,7 +88,7 @@ def synthesize_summary(combined_text):
         do_sample=False,
         no_repeat_ngram_size=3,
         truncation=True,
-        num_beams=4,
+        num_beams=NUM_BEAMS,
     )
 
     return result[0]["summary_text"]
@@ -139,7 +140,7 @@ def reduce_to_fit(text, limit=1000):
                                 do_sample=False,
                                 no_repeat_ngram_size=3,
                                 truncation=True,
-                                num_beams=4)
+                                num_beams=NUM_BEAMS)
             summaries.append(result[0]["summary_text"])
         text = "\n".join(summaries)
 
