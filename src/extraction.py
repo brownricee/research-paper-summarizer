@@ -5,14 +5,15 @@ from src.preprocessing import detect_sections
 
 def getTextFromPDF(pdf_path):
   text = ""
+  all_words = []
 
   try:
     with pdfplumber.open(pdf_path) as pdf:
-      all_words = []
       for page in pdf.pages:
-        words = page.extract_words(x_tolerance=2, keep_blank_chars=True, extra_attrs=["fontname", "size"])
+        words = page.extract_words(x_tolerance=2, keep_blank_chars=True, extra_attrs=["fontname", "size", "upright"])
+        words = [w for w in words if w["upright"]]
         all_words.extend(words)
-        # group words into lines by their vertical position
+        # Group words into lines by their vertical position
         lines = {}
         for w in words:
           top = round(w['top'], 1)

@@ -7,6 +7,10 @@ from src.ranking import rank_chunks
 from src.summarization import summarize_chunks
 from src.aggregation import aggregate_summary
 from src.summarization import synthesize_summary
+from src.config import (
+    TLDR_MAX_LENGTH,
+    TLDR_MIN_LENGTH
+)
 
 def main():
     pdf_path = "C:\\Users\\ryaan\\Desktop\\research-paper-summarizer\\attention_research_paper.pdf"
@@ -23,16 +27,11 @@ def main():
     chunk_summaries = summarize_chunks(ranked_chunks)
     print("Summarizing..\n")
 
-    body = aggregate_summary(chunk_summaries, section_order=list(sections.keys()), with_headers=True)
+    key_list = [k for k in sections if k != 'abstract']
+    body = aggregate_summary(chunk_summaries, section_order=key_list, with_headers=True)
     plain = aggregate_summary(chunk_summaries, section_order=list(sections.keys()), with_headers=False)
     
-    tldr = ""
-    if chunk_summaries.get("abstract"):
-        tldr = synthesize_summary(chunk_summaries["abstract"])
-    elif chunk_summaries.get("introduction"):
-        tldr = synthesize_summary(chunk_summaries["introduction"])
-    else:
-        tldr = synthesize_summary(plain)
+    tldr = synthesize_summary(plain, TLDR_MAX_LENGTH, TLDR_MIN_LENGTH) if plain else ""
 
     title = os.path.splitext(os.path.basename(pdf_path))[0].replace("_", " ").title()
     document = f"# Summary: {title}\n\n## TL;DR\n{tldr}\n\n{body}"

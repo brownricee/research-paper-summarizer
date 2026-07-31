@@ -11,7 +11,7 @@ def is_mostly_garbled(text, threshold=0.5):
     return garbled / len(words) > threshold
 
 def clean_text(text):
-    # any lowercase letters immediately followed by
+    # Any lowercase letters immediately followed by
     # capital letters have spaces inserted between them
     text = re.sub(r'([a-z])([A-Z])', r'\1 \2', text)
     text = re.sub(r'([.!?])([A-Za-z])', r'\1 \2', text)
@@ -22,30 +22,30 @@ def clean_text(text):
     text = text.replace("\n", " ")
     text = " ".join(text.split())
 
-    # fix fully merged lowercase words using wordninja
+    # Fix fully merged lowercase words using wordninja
     words = text.split()
     words = [" ".join(wordninja.split(w)) if len(w) > 15 else w for w in words]
     text = " ".join(words)
 
-    # filter out garbled sentences
+    # Filter out garbled sentences
     sentences = re.split(r'(?<=[.!?])\s+', text)
     text = " ".join(s for s in sentences if not is_mostly_garbled(s) and not is_table_junk(s) and not has_contact_info(s))
 
     text = re.sub(r'[^\w\s\.,:%()-]', '', text)
 
-    # filter reversed words from figure visualizations
+    # Filter reversed words from figure visualizations
     words = text.split()
     filtered = []
     for w in words:
         if len(w) > 3:
             rev = w[::-1]
-            # if the reversed version splits into fewer pieces, it's a backwards word
+            # If the reversed version splits into fewer pieces, it's a backwards word
             if len(wordninja.split(rev)) < len(wordninja.split(w)):
                 continue
         filtered.append(w)
     text = " ".join(filtered)
 
-    # filters out trailing words except for standalone "a" or "i" letters.
+    # Filters out trailing words except for standalone "a" or "i" letters.
     text = re.sub(r'\b(?![ai]\b)[a-z]\b', '', text)
     text = " ".join(text.split())
 
@@ -57,7 +57,7 @@ def detect_sections(text, words=None):
 
     body_size = get_body_font_size(words)
 
-    # regroup words into separate lines
+    # Regroup words into separate lines
     lines = []
     current, current_top = [], None
     for w in words:
@@ -70,7 +70,7 @@ def detect_sections(text, words=None):
     if current:
         lines.append(current)
     
-    # walk through all lines and split on headings (when font size is big and words are bolded)
+    # Walk through all lines and split on headings (when font size is big and words are bolded)
     sections = {}
     current_section = "preamble"
     for line in lines:
@@ -80,6 +80,8 @@ def detect_sections(text, words=None):
             if name in ("references", "bibliography"):
                 break
             current_section = name
+        elif not is_body_line(line, body_size):
+            continue
         else:
             sections[current_section] = (sections.get(current_section, "") + " " + line_text).strip()
 
@@ -125,7 +127,7 @@ def get_body_font_size(words):
     return sizes.most_common(1)[0][0]
 
 def is_bold(fontname):
-    # pdfplumber fontnames embed the weight, e.g. "ABCDEF+NimbusRomNo9L-Medi"
+    # Pdfplumber fontnames embed the weight, e.g. "ABCDEF+NimbusRomNo9L-Medi"
     # or "...-Bold". Guard against None in case a word has no fontname.
     return bool(fontname) and "bold" in fontname.lower()
 
@@ -137,17 +139,17 @@ def is_heading(line_words, body_size, max_heading_words=8, size_tolerance=0.5):
     if not text:
         return False
 
-    # must contain a letter - rejects page numbers, equation/figure
+    # Must contain a letter - rejects page numbers, equation/figure
     # labels, and other digit/symbol-only lines that may be bold or large.
     if not any(ch.isalpha() for ch in text):
         return False
 
-    # headings are short - rejects a bold or large emphasized
+    # Headings are short - rejects a bold or large emphasized
     # sentence sitting inside a paragraph.
     if len(text.split()) > max_heading_words:
         return False
 
-    # headings don't end like a running sentence (a trailing period,
+    # Headings don't end like a running sentence (a trailing period,
     # comma, etc.). This also filters most figure/table captions.
     if text[-1] in ".!?,;":
         return False
@@ -194,3 +196,13 @@ def _rejoin_hyphen(m):
         return merged
     else:
         return m.group(0)
+
+def is_body_line(line_words, body_size, size_tolerance=0.5):
+    if body_size is None:
+        return True
+
+    sizes = [round(w["size"], 1) for w in line_words if w.get("size") is not None]
+    if not sizes:
+        return True
+
+    return max(sizes) >= body_size - size_tolerance

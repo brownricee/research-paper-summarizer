@@ -77,10 +77,10 @@ def summarize_chunks(ranked_chunks, top_n=TOP_N_PER_SECTION):
     return section_summaries
 
 
-def synthesize_summary(combined_text):
+def synthesize_summary(combined_text, max_cap=AGGREGATE_MAX_LENGTH, min_cap=AGGREGATE_MIN_LENGTH):
     summarizer = get_summarizer()
     combined_text = reduce_to_fit(text=combined_text)
-    max_len, min_len = _clamp_lengths(combined_text, AGGREGATE_MAX_LENGTH, AGGREGATE_MIN_LENGTH)
+    max_len, min_len = _clamp_lengths(combined_text, max_cap, min_cap)
     result = summarizer(
         combined_text,
         max_length=max_len,
@@ -145,5 +145,5 @@ def reduce_to_fit(text, limit=1000):
         text = "\n".join(summaries)
 
         iterations += 1
-    # combined text now summarized properly without discarding information early due to 1024 token truncation
+    # Combined text now summarized properly without discarding information early due to 1024 token truncation
     return text
