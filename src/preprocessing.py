@@ -11,6 +11,8 @@ def is_mostly_garbled(text, threshold=0.5):
     return garbled / len(words) > threshold
 
 def clean_text(text):
+    # Cleans URLs
+    text = re.sub(r'https?://\S+(?:\s+\S+/\S+)*|www\.\S+(?:\s+\S+/\S+)*', '', text)
     # Any lowercase letters immediately followed by
     # capital letters have spaces inserted between them
     text = re.sub(r'([a-z])([A-Z])', r'\1 \2', text)
@@ -21,6 +23,9 @@ def clean_text(text):
     text = re.sub(r'(\w+)-\s+(\w+)', _rejoin_hyphen, text)
     text = text.replace("\n", " ")
     text = " ".join(text.split())
+
+    # Prevents decimal values from being destroyed.
+    text = re.sub(r'(\d)\s*\.\s*(\d)', r'\1.\2', text)
 
     # Fix fully merged lowercase words using wordninja
     words = text.split()
@@ -73,12 +78,20 @@ def detect_sections(text, words=None):
     # Walk through all lines and split on headings (when font size is big and words are bolded)
     sections = {}
     current_section = "preamble"
+    # Break on these words if detected in a section heading.
+    TERMINAL_SECTION_RE = re.compile(
+        r'^\s*(?:\d+[\.\d]*\s+)?'
+        r'(references|bibliography|acknowledge?ments?|funding'
+        r'|author contributions?|conflicts? of interest)\b',
+        re.IGNORECASE,
+    )
     for line in lines:
         line_text = " ".join(w['text'] for w in line).strip()
+
+        if TERMINAL_SECTION_RE.search(line_text):
+            break
         if is_heading(line, body_size):
             name = re.sub(r'^\d+[\.\d]*\s+', '', line_text).lower()
-            if name in ("references", "bibliography"):
-                break
             current_section = name
         elif not is_body_line(line, body_size):
             continue
