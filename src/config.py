@@ -19,3 +19,4 @@ AGGREGATE_MIN_LENGTH = 40
 # TLDR Summary
 TLDR_MAX_LENGTH = 90
 TLDR_MIN_LENGTH = 30
+TLDR_SECTIONS = ("abstract", "introduction", "conclusion")
