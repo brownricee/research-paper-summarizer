@@ -2,6 +2,8 @@ import re
 import wordninja
 from collections import Counter
 
+CITATION_RE = re.compile(r'\[\s*\d+(?:\s*[,;–—-]\s*\d+)*\s*\]')
+
 def is_mostly_garbled(text, threshold=0.5):
     words = text.split()
     if not words:
@@ -13,6 +15,8 @@ def is_mostly_garbled(text, threshold=0.5):
 def clean_text(text):
     # Cleans URLs
     text = re.sub(r'https?://\S+(?:\s+\S+/\S+)*|www\.\S+(?:\s+\S+/\S+)*', '', text)
+    # Strips citation markers
+    text = re.sub(CITATION_RE, '', text)
     # Any lowercase letters immediately followed by
     # capital letters have spaces inserted between them
     text = re.sub(r'([a-z])([A-Z])', r'\1 \2', text)
@@ -36,7 +40,7 @@ def clean_text(text):
     sentences = re.split(r'(?<=[.!?])\s+', text)
     text = " ".join(s for s in sentences if not is_mostly_garbled(s) and not is_table_junk(s) and not has_contact_info(s))
 
-    text = re.sub(r'[^\w\s\.,:%()-]', '', text)
+    text = re.sub(r'[^\w\s\.,:%()=+<>-]', '', text)
 
     # Filter reversed words from figure visualizations
     words = text.split()
@@ -48,11 +52,7 @@ def clean_text(text):
             if len(wordninja.split(rev)) < len(wordninja.split(w)):
                 continue
         filtered.append(w)
-    text = " ".join(filtered)
-
-    # Filters out trailing words except for standalone "a" or "i" letters.
-    text = re.sub(r'\b(?![ai]\b)[a-z]\b', '', text)
-    text = " ".join(text.split())
+    text = " ".join(filtered) 
 
     return text
 
