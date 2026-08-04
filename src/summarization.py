@@ -34,7 +34,6 @@ def _clamp_lengths(text, max_cap, min_cap):
 
 def summarize_chunks(ranked_chunks, top_n=TOP_N_PER_SECTION):
     section_summaries = {}
-    summarizer = get_summarizer()
 
     buckets = defaultdict(list)
     for chunk in ranked_chunks:
@@ -58,18 +57,7 @@ def summarize_chunks(ranked_chunks, top_n=TOP_N_PER_SECTION):
                 continue
             seen_texts.append(text)
 
-            max_len, min_len = _clamp_lengths(text, SUMMARY_MAX_LENGTH, SUMMARY_MIN_LENGTH)
-
-            result = summarizer(
-                text,
-                max_length=max_len,
-                min_length=min_len,
-                do_sample=False,
-                no_repeat_ngram_size=3,
-                truncation=True,
-                num_beams=NUM_BEAMS,
-            )
-            section_summary += result[0]["summary_text"]
+            section_summary += _run_summarizer(text, SUMMARY_MAX_LENGTH, SUMMARY_MIN_LENGTH)
             section_summary += "\n"
 
         section_summaries[section_name] = section_summary
@@ -78,20 +66,9 @@ def summarize_chunks(ranked_chunks, top_n=TOP_N_PER_SECTION):
 
 
 def synthesize_summary(combined_text, max_cap=AGGREGATE_MAX_LENGTH, min_cap=AGGREGATE_MIN_LENGTH):
-    summarizer = get_summarizer()
     combined_text = reduce_to_fit(text=combined_text)
-    max_len, min_len = _clamp_lengths(combined_text, max_cap, min_cap)
-    result = summarizer(
-        combined_text,
-        max_length=max_len,
-        min_length=min_len,
-        do_sample=False,
-        no_repeat_ngram_size=3,
-        truncation=True,
-        num_beams=NUM_BEAMS,
-    )
 
-    return result[0]["summary_text"]
+    return _run_summarizer(combined_text, max_cap, min_cap)
 
 def token_len(text):
     summarizer = get_summarizer()
@@ -127,23 +104,61 @@ def split_by_tokens(text, limit=900):
 def reduce_to_fit(text, limit=1000):
     max_iteration = 5
     iterations = 0
-    summarizer = get_summarizer()
 
     while token_len(text) > limit and iterations < max_iteration:
         windows = split_by_tokens(text, 900)
         summaries = []
         for w in windows:
-            max_len, min_len = _clamp_lengths(w, SUMMARY_MAX_LENGTH, SUMMARY_MIN_LENGTH)
-            result = summarizer(w,
-                                max_length=max_len,
-                                min_length=min_len,
-                                do_sample=False,
-                                no_repeat_ngram_size=3,
-                                truncation=True,
-                                num_beams=NUM_BEAMS)
-            summaries.append(result[0]["summary_text"])
+            summaries.append(_run_summarizer(w, SUMMARY_MAX_LENGTH, SUMMARY_MIN_LENGTH))
         text = "\n".join(summaries)
 
         iterations += 1
     # Combined text now summarized properly without discarding information early due to 1024 token truncation
+    return text
+
+def _run_summarizer(text, max_cap, min_cap):
+    summarizer = get_summarizer()
+    max_len, min_len = _clamp_lengths(text, max_cap, min_cap)
+    result = summarizer(
+        text,
+        max_length=max_len,
+        min_length=min_len,
+        do_sample=False,
+        no_repeat_ngram_size=3,
+        truncation=True,
+        num_beams=NUM_BEAMS,
+    )
+
+    result = _trim_to_last_sentence(result[0]["summary_text"])
+
+    return result
+
+def _trim_to_last_sentence(text):
+    text = text.strip()
+    trailing_closer = ("\"", "'", ")", "]", "}", "\u201d", "\u2019")
+    terminator_characters = (".", "?", "!")
+
+    def ends_sentence(candidate):
+        # Peel trailing closers and whitespace so '...all you need."' still counts.
+        candidate = candidate.rstrip("".join(trailing_closer) + " \t\r\n")
+        if not candidate:
+            return False
+        return candidate.endswith(terminator_characters)
+
+    if not text:
+        return text
+    elif ends_sentence(text):
+        return text
+
+    nlp = get_nlp()
+    doc = nlp(text)
+
+    spans = list(doc.sents)
+
+    for i in range(len(spans) - 1, -1, -1):
+        sentence = spans[i].text
+        if ends_sentence(sentence):
+            return text[:spans[i].end_char]
+
+    # No complete sentence anywhere: never return empty.
     return text
