@@ -1,3 +1,4 @@
+import re
 from transformers import pipeline
 from collections import defaultdict
 
@@ -15,6 +16,11 @@ from src.config import (
 )
 
 _summarizer = None
+
+# Fixes issue with punctuation appearing after a space due to distillbart model.
+def _normalize_spacing(text):
+    text = re.sub(r"\s+([.,;:!?])", r"\1", text)
+    return re.sub(r"[ \t]+", " ", text).strip()
 
 def get_summarizer():
     global _summarizer
@@ -36,17 +42,20 @@ def summarize_chunks(ranked_chunks, top_n=TOP_N_PER_SECTION):
     section_summaries = {}
 
     buckets = defaultdict(list)
-    for chunk in ranked_chunks:
-        buckets[chunk["section"]].append(chunk)
+
+    for position, chunk in enumerate(ranked_chunks):
+        buckets[chunk["section"]].append((position, chunk))
 
     for section_name, chunks_in_section in buckets.items():
         seen_texts = []
         section_summary = ""
 
-        chunks_in_section.sort(key=lambda chunk: chunk["score"], reverse=True)
+        chunks_in_section.sort(key=lambda pair: pair[1]["score"], reverse=True)
+        selected = chunks_in_section[:top_n]
+        selected.sort(key=lambda pair: pair[0])
 
-        for i in range(min(top_n, len(chunks_in_section))):
-            text = chunks_in_section[i]["text"]
+        for position, chunk in selected:
+            text = chunk["text"]
 
             # Skip chunks that are too short to summarize meaningfully
             if len(text) < MIN_CHUNK_CHARS:
@@ -57,8 +66,9 @@ def summarize_chunks(ranked_chunks, top_n=TOP_N_PER_SECTION):
                 continue
             seen_texts.append(text)
 
-            section_summary += _run_summarizer(text, SUMMARY_MAX_LENGTH, SUMMARY_MIN_LENGTH)
-            section_summary += "\n"
+            result = _run_summarizer(text, SUMMARY_MAX_LENGTH, SUMMARY_MIN_LENGTH, allow_empty=True)
+            if result:
+                section_summary += result + "\n"
 
         section_summaries[section_name] = section_summary
 
@@ -116,7 +126,7 @@ def reduce_to_fit(text, limit=1000):
     # Combined text now summarized properly without discarding information early due to 1024 token truncation
     return text
 
-def _run_summarizer(text, max_cap, min_cap):
+def _run_summarizer(text, max_cap, min_cap, allow_empty=False):
     summarizer = get_summarizer()
     max_len, min_len = _clamp_lengths(text, max_cap, min_cap)
     result = summarizer(
@@ -129,11 +139,11 @@ def _run_summarizer(text, max_cap, min_cap):
         num_beams=NUM_BEAMS,
     )
 
-    result = _trim_to_last_sentence(result[0]["summary_text"])
+    result = _normalize_spacing(result[0]["summary_text"])
 
-    return result
+    return _trim_to_last_sentence(result, allow_empty=allow_empty)
 
-def _trim_to_last_sentence(text):
+def _trim_to_last_sentence(text, allow_empty=False):
     text = text.strip()
     trailing_closer = ("\"", "'", ")", "]", "}", "\u201d", "\u2019")
     terminator_characters = (".", "?", "!")
@@ -161,4 +171,4 @@ def _trim_to_last_sentence(text):
             return text[:spans[i].end_char]
 
     # No complete sentence anywhere: never return empty.
-    return text
+    return "" if allow_empty else text
