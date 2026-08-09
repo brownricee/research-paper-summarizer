@@ -13,6 +13,7 @@ from src.config import (
     AGGREGATE_MAX_LENGTH,
     AGGREGATE_MIN_LENGTH,
     NUM_BEAMS,
+    COMPRESSION_RATIO
 )
 
 _summarizer = None
@@ -34,7 +35,8 @@ def _clamp_lengths(text, max_cap, min_cap):
     # tokens than the input has, and min_length never exceeds max_length.
     tokenizer = get_summarizer().tokenizer
     input_len = len(tokenizer.encode(text, truncation=True, max_length=1024, add_special_tokens=False))
-    max_len = min(max_cap, input_len)
+    target_len = max(min_cap, int(input_len * COMPRESSION_RATIO))
+    max_len = min(max_cap, target_len)
     min_len = min(min_cap, max_len)
     return max_len, min_len
 
@@ -48,7 +50,7 @@ def summarize_chunks(ranked_chunks, top_n=TOP_N_PER_SECTION):
 
     for section_name, chunks_in_section in buckets.items():
         seen_texts = []
-        section_summary = ""
+        kept_texts = []
 
         chunks_in_section.sort(key=lambda pair: pair[1]["score"], reverse=True)
         selected = chunks_in_section[:top_n]
@@ -66,11 +68,18 @@ def summarize_chunks(ranked_chunks, top_n=TOP_N_PER_SECTION):
                 continue
             seen_texts.append(text)
 
-            result = _run_summarizer(text, SUMMARY_MAX_LENGTH, SUMMARY_MIN_LENGTH, allow_empty=True)
-            if result:
-                section_summary += result + "\n"
+            kept_texts.append(text)
 
-        section_summaries[section_name] = section_summary
+        if not kept_texts:
+            section_summaries[section_name] = ""
+            continue
+
+        section_input = " ".join(kept_texts)
+        section_input = reduce_to_fit(section_input)
+
+        section_summaries[section_name] = _run_summarizer(
+            section_input, SUMMARY_MAX_LENGTH, SUMMARY_MIN_LENGTH
+        )
 
     return section_summaries
 
@@ -141,6 +150,8 @@ def _run_summarizer(text, max_cap, min_cap, allow_empty=False):
 
     result = _normalize_spacing(result[0]["summary_text"])
 
+    result = _drop_dangling_sentences(result)
+
     return _trim_to_last_sentence(result, allow_empty=allow_empty)
 
 def _trim_to_last_sentence(text, allow_empty=False):
@@ -172,3 +183,16 @@ def _trim_to_last_sentence(text, allow_empty=False):
 
     # No complete sentence anywhere: never return empty.
     return "" if allow_empty else text
+
+DANGLING_TAIL_RE = re.compile(
+    r"\b(?:such as|similar to|available at|described in|shown in"
+    r"|proposed in|introduced in|of|in|at)\s*[.!?]$",
+    re.IGNORECASE,
+)
+
+def _drop_dangling_sentences(text):
+    sentences = re.split(r'(?<=[.!?])\s+', text)
+    kept = [s for s in sentences if not DANGLING_TAIL_RE.search(s.strip())]
+    if not kept:
+        return text
+    return " ".join(kept)
