@@ -12,6 +12,12 @@ def is_mostly_garbled(text, threshold=0.5):
                   not any(c in 'aeiou' for c in w.lower()))
     return garbled / len(words) > threshold
 
+# Table/figure captions get welded into body text when the preceding sentence
+# never terminated (e.g. across a page break).
+CAPTION_RE = re.compile(
+    r'\s*\b(?:\d{1,3}\s+)?(?:table|figure|fig\.?)\s*\d+\s*:[^.]*\.?',
+    re.IGNORECASE,
+)
 def clean_text(text):
     # Cleans URLs
     text = re.sub(r'https?://\S+(?:\s+\S+/\S+)*|www\.\S+(?:\s+\S+/\S+)*', '', text)
@@ -30,6 +36,9 @@ def clean_text(text):
 
     # Prevents decimal values from being destroyed.
     text = re.sub(r'(\d)\s*\.\s*(\d)', r'\1.\2', text)
+
+    # Strips table/figure captions welded into the surrounding prose
+    text = re.sub(CAPTION_RE, '', text)
 
     # Fix fully merged lowercase words using wordninja
     words = text.split()
