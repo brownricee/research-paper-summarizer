@@ -2,3 +2,5 @@
 *.pdf
 # Ignore Python bytecode cache
 __pycache__/
+# Cached generated summaries from evaluate.py (regenerable, one file per paper)
+data/cache/
