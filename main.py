@@ -32,7 +32,7 @@ def main():
     body = aggregate_summary(chunk_summaries, section_order=key_list, with_headers=True)
     plain = aggregate_summary(chunk_summaries, section_order=list(sections.keys()), with_headers=False)
 
-    tldr_keys = [k for k in sections if k.startswith(TLDR_SECTIONS)]
+    tldr_keys = [k for k in sections if any(s in k for s in TLDR_SECTIONS)]
     tldr_source = aggregate_summary(chunk_summaries, section_order=tldr_keys, with_headers=False) or plain
 
     tldr = synthesize_summary(tldr_source, TLDR_MAX_LENGTH, TLDR_MIN_LENGTH) if tldr_source else ""
