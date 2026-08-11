@@ -16,8 +16,12 @@ REQUEST_DELAY = 3
 RETRY_ATTEMPTS = 4
 RETRY_BACKOFF = 5
 
-PAPERS_DIR = os.path.join("data", "papers")
-REFERENCES_PATH = os.path.join("data", "references.json")
+# Anchored to this file, not the working directory - otherwise running the
+# script from a different folder creates a second data/ tree next to the CWD.
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DATA_DIR = os.path.join(BASE_DIR, "data")
+PAPERS_DIR = os.path.join(DATA_DIR, "papers")
+REFERENCES_PATH = os.path.join(DATA_DIR, "references.json")
 
 
 def _collapse(text):
