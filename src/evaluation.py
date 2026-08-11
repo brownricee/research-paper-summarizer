@@ -31,22 +31,24 @@ def split_into_lines(text):
 
     return lines
 
+def _first_k_sentences(text, k):
+    nlp = get_nlp()
+    doc = nlp(text=text)
+
+    sentences = [sent.text for sent in doc.sents]
+
+    return " ".join(sentences[:k])
+
 def lead_k(sections, k=3):
     for name in sections:
         if "introduction" in name:
-            section = sections[name]
-            text = section["text"]
+            return _first_k_sentences(sections[name], k)
 
-            nlp = get_nlp()
-            doc = nlp(text=text)
+    if not sections:
+        return ""
 
-            sentences = [sent.text for sent in doc.sents]
-
-            return sentences[:k]
-
-    return next(iter(sections.values()))
-
-
+    # No introduction detected - fall back to the first section, still capped at k.
+    return _first_k_sentences(next(iter(sections.values())), k)
 
 def extractive_baseline(ranked_chunks, top_n=4):
     sorted_chunks = sorted(ranked_chunks, key=lambda x: x["score"], reverse=True)
@@ -55,10 +57,9 @@ def extractive_baseline(ranked_chunks, top_n=4):
 
     return " ".join([chunk["text"] for chunk in top_chunks])
 
-
-
-target = "The quick brown fox jumped over the lazy dog."
-prediction = "The agile brown fox jumped over the lazy dog."
-
 if __name__ == "__main__":
-    score(target, prediction)
+    target = "The quick brown fox jumped over the lazy dog."
+    prediction = "The agile brown fox jumped over the lazy dog."
+
+    for metric, value in score(target, prediction).items():
+        print(f"{metric}: P={value.precision:.4f} R={value.recall:.4f} F={value.fmeasure:.4f}")
