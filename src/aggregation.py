@@ -18,6 +18,8 @@ def aggregate_summary(section_summaries, section_order=None, with_headers=False)
         if with_headers:
             output += f"## {section_name.title()}\n{summary.strip()}\n\n"
         else:
-            output += summary
+            # Needs the trailing space since without it consecutive section summaries
+            # weld together and the sentence boundary is lost for everything downstream.
+            output += summary.strip() + " "
 
     return output.strip()
