@@ -85,7 +85,7 @@ PDFs are not committed (author copyright, repo size), which is why the fetch ste
 | lead-3 baseline | 0.2000 | 0.4025 | 0.1399 | 0.0440 | 0.1773 | 74 |
 | extractive-only | 0.3709 | 0.2747 | 0.6150 | 0.1064 | 0.3390 | 466 |
 
-**vs. lead-3** (first 3 sentences of the introduction — the standard summarization baseline, and a notoriously strong one on arXiv): the pipeline wins by **+12.7 ROUGE-1 points on all 20 of 20 papers**, with more than double the ROUGE-2. It wins on precision *and* recall simultaneously, so the gap is not a length artifact. 95% CIs do not overlap: [0.298, 0.356] vs [0.181, 0.219].
+**vs. lead-3** (first 3 sentences of the introduction — the standard summarization baseline, and a notoriously strong one on arXiv): the pipeline wins by **+12.7 ROUGE-1 points on all 20 of 20 papers**, with more than double the ROUGE-2. It wins on precision *and* recall simultaneously, so the gap is not a length artifact. 95% CIs do not overlap ([0.298, 0.356] vs [0.181, 0.219]) and a paired sign test over the 20 papers gives p = 1.9e-6. Both figures are computed by `evaluate.py` and written into [data/results.md](data/results.md).
 
 **vs. extractive-only** (the top-ranked chunks emitted verbatim, no summarization step): extractive scores higher on F, but only by emitting **2.4× the reference length** — it buys recall of 0.615 while its precision falls to 0.275. The pipeline's precision is **74% higher**. This comparison is the reason the results table reports precision and recall rather than F alone.
 

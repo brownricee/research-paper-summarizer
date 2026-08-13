@@ -4,7 +4,8 @@ os.environ["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "1"
 import csv
 import json
 import argparse
-from statistics import mean
+from math import comb, sqrt
+from statistics import mean, stdev
 
 from src.extraction import getTextFromPDF
 from src.chunking import chunk_text
@@ -181,6 +182,52 @@ def write_csv(rows):
         writer.writerows(rows)
 
 
+def confidence_interval(values):
+    # Normal approximation: mean +/- 1.96 standard errors.
+    if len(values) < 2:
+        return None
+
+    half_width = 1.96 * stdev(values) / sqrt(len(values))
+    return mean(values) - half_width, mean(values) + half_width
+
+
+def sign_test(wins, n):
+    # Two-sided probability of a split at least this lopsided if the two
+    # systems were really equal (fair-coin model).
+    tail = sum(comb(n, k) for k in range(wins, n + 1)) * 0.5 ** n
+    return min(1.0, 2 * tail)
+
+
+def compare_to_baseline(rows, baseline="lead3"):
+    # Paired per-paper comparison - the win count and p-value quoted in the README.
+    scores = {}
+    for row in rows:
+        if row["status"] == "ok":
+            scores.setdefault(row["system"], {})[row["arxiv_id"]] = float(row["rouge1_f"])
+
+    if baseline not in scores:
+        return []
+
+    lines = []
+    for name, by_paper in scores.items():
+        if name == baseline:
+            continue
+
+        papers = [p for p in by_paper if p in scores[baseline]]
+        if not papers:
+            continue
+
+        wins = sum(by_paper[p] > scores[baseline][p] for p in papers)
+        gap = mean(by_paper[p] for p in papers) - mean(scores[baseline][p] for p in papers)
+
+        lines.append(
+            f"- **{name}** vs {baseline}: {gap:+.4f} ROUGE-1, winning on "
+            f"**{wins}/{len(papers)}** papers (sign test p = {sign_test(wins, len(papers)):.2g})"
+        )
+
+    return lines
+
+
 def build_report(rows, succeeded, total):
     lines = [
         "# ROUGE Evaluation",
@@ -191,8 +238,8 @@ def build_report(rows, succeeded, total):
         "",
         f"Extraction succeeded on **{succeeded}/{total}** papers.",
         "",
-        "| System | ROUGE-1 F | ROUGE-2 F | ROUGE-Lsum F | Avg words |",
-        "|---|---|---|---|---|",
+        "| System | ROUGE-1 F | 95% CI | ROUGE-2 F | ROUGE-Lsum F | Avg words |",
+        "|---|---|---|---|---|---|",
     ]
 
     for name in SYSTEMS:
@@ -200,15 +247,24 @@ def build_report(rows, succeeded, total):
         if not scored:
             continue
 
+        interval = confidence_interval([r["rouge1_f"] for r in scored])
+        interval_text = f"[{interval[0]:.3f}, {interval[1]:.3f}]" if interval else "-"
+
         lines.append(
-            "| {} | {:.4f} | {:.4f} | {:.4f} | {:.0f} |".format(
+            "| {} | {:.4f} | {} | {:.4f} | {:.4f} | {:.0f} |".format(
                 name,
                 mean(r["rouge1_f"] for r in scored),
+                interval_text,
                 mean(r["rouge2_f"] for r in scored),
                 mean(r["rougeLsum_f"] for r in scored),
                 mean(r["system_words"] for r in scored),
             )
         )
+
+    comparisons = compare_to_baseline(rows)
+    if comparisons:
+        lines += ["", "Paired per-paper comparison against the lead-3 baseline:", ""]
+        lines += comparisons
 
     reference_words = [r["reference_words"] for r in rows if r["status"] == "ok"]
     if reference_words:
@@ -227,6 +283,13 @@ def main():
     args = parser.parse_args()
 
     rows, succeeded, total = run(limit=args.limit, use_cache=not args.no_cache)
+
+    # A partial run must not touch the committed artifacts: both writers open
+    # with "w", so a --limit 1 smoke test would truncate the full-run results.
+    if args.limit:
+        print(f"\n--limit set: skipping {os.path.basename(RESULTS_CSV)} / "
+              f"{os.path.basename(RESULTS_MD)} so the full-run results are kept.")
+        return
 
     write_csv(rows)
 
