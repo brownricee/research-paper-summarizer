@@ -82,6 +82,32 @@ def fetch_metadata(category=CATEGORY, max_results=MAX_RESULTS):
     return papers
 
 
+def load_pinned():
+    # references.json doubles as the corpus manifest: its keys are the arXiv ids.
+    # Reusing it keeps a clone reproducing the exact papers the README reports.
+    if not os.path.exists(REFERENCES_PATH):
+        return None
+
+    try:
+        with open(REFERENCES_PATH, encoding="utf-8") as f:
+            references = json.load(f)
+    except (json.JSONDecodeError, OSError):
+        # An empty or half-written file should fall back to building a fresh corpus.
+        return None
+
+    if not references:
+        return None
+
+    return [
+        {
+            "arxiv_id": arxiv_id,
+            "title": entry.get("title", ""),
+            "abstract": entry.get("abstract", ""),
+        }
+        for arxiv_id, entry in references.items()
+    ]
+
+
 def download_pdf(arxiv_id):
     # Returns True if the network was hit, False if the PDF was already on disk.
     path = os.path.join(PAPERS_DIR, f"{arxiv_id}.pdf")
@@ -106,13 +132,25 @@ def download_pdf(arxiv_id):
 def main():
     os.makedirs(PAPERS_DIR, exist_ok=True)
 
-    papers = fetch_metadata()
-    print(f"Found {len(papers)} papers, keeping up to {TARGET_PAPERS}..\n")
+    papers = load_pinned()
+    pinned = papers is not None
+
+    if pinned:
+        # No API call needed - the abstracts are already in references.json,
+        # so only the PDFs are missing.
+        target = len(papers)
+        print(f"Reusing the {target} papers pinned in references.json.")
+        print("Delete that file to build a fresh corpus instead.\n")
+    else:
+        papers = fetch_metadata()
+        target = TARGET_PAPERS
+        print(f"Found {len(papers)} papers, keeping up to {target}..\n")
 
     references = {}
+    failed = []
 
     for paper in papers:
-        if len(references) >= TARGET_PAPERS:
+        if len(references) >= target:
             break
 
         arxiv_id = paper["arxiv_id"]
@@ -122,6 +160,7 @@ def main():
         except (requests.exceptions.RequestException, ValueError, OSError) as error:
             # One dead link shouldn't kill the whole run.
             print(f"  skipped {arxiv_id}: {type(error).__name__}")
+            failed.append(arxiv_id)
             continue
 
         references[arxiv_id] = {
@@ -132,6 +171,15 @@ def main():
 
         if fetched:
             time.sleep(REQUEST_DELAY)
+
+    if pinned:
+        # Never rewrite a pinned corpus. A single failed download would drop that
+        # paper from the committed file and silently shrink the benchmark.
+        print(f"\n{len(references)}/{target} PDFs present; references.json left unchanged.")
+        if failed:
+            print(f"WARNING: no PDF for {', '.join(failed)} - evaluate.py will "
+                  f"record {'them' if len(failed) > 1 else 'it'} as failed.")
+        return
 
     # Written after the loop so references.json only lists papers whose PDF
     # actually landed - the two never disagree.
