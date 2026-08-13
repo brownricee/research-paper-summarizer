@@ -1,6 +1,8 @@
 import os
 os.environ["HF_HUB_DISABLE_SYMLINKS_WARNING"] = "1"
 
+import argparse
+
 from src.extraction import getTextFromPDF
 from src.chunking import chunk_text
 from src.ranking import rank_chunks
@@ -14,7 +16,16 @@ from src.config import (
 )
 
 def main():
-    pdf_path = "C:\\Users\\ryaan\\Desktop\\research-paper-summarizer\\attention_research_paper.pdf"
+    parser = argparse.ArgumentParser(
+        description="Summarize a research paper PDF into a Markdown document."
+    )
+    parser.add_argument("pdf_path", help="path to a text-based (not scanned) PDF")
+    args = parser.parse_args()
+
+    pdf_path = args.pdf_path
+
+    if not os.path.isfile(pdf_path):
+        raise SystemExit(f"No such file: {pdf_path}")
 
     sections = getTextFromPDF(pdf_path)
     print("Text extracted..\n")
