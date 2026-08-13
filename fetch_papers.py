@@ -6,7 +6,11 @@ import xml.etree.ElementTree as ET
 import requests
 
 API = "http://export.arxiv.org/api/query"
-HEADERS = {"User-Agent": "research-paper-summarizer/1.0 (rk33283@my.utexas.edu)"}
+# arXiv asks automated clients to identify themselves. Set the ARXIV_CONTACT
+# environment variable to your own email or repo URL; the default is a
+# placeholder so no personal address is committed to the repository.
+CONTACT = os.environ.get("ARXIV_CONTACT", "contact-not-set")
+HEADERS = {"User-Agent": f"research-paper-summarizer/1.0 ({CONTACT})"}
 NS = {"atom": "http://www.w3.org/2005/Atom"}
 
 CATEGORY = "cs.CL"
