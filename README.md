@@ -10,6 +10,7 @@ A Python pipeline that turns a research paper PDF into a structured, readable su
 - **Abstractive summarization** — summarizes the top-ranked chunks per section with a HuggingFace BART model (`distilbart-cnn`), recursively reducing oversized sections so nothing is lost to truncation.
 - **Synthesized TL;DR** — produces a short, top-line summary distilled from the abstract, introduction, and conclusion.
 - **Modular pipeline** — each stage (extraction, preprocessing, chunking, ranking, summarization, aggregation) is an independent, swappable module.
+- **Quantitative evaluation** — a ROUGE harness scores the pipeline against author-written abstracts on 20 arXiv papers, benchmarked against lead-3 and extractive-only baselines. See [Evaluation](#evaluation).
 
 ## How It Works
 
@@ -51,15 +52,42 @@ python -m spacy download en_core_web_sm
 
 ## Usage
 
-1. Place your research paper PDF in a known location.
-2. Update the `pdf_path` variable in `main.py` to point to your PDF.
-3. Run the main script:
+Pass the path to any text-based PDF:
 
 ```bash
-python main.py
+python main.py path/to/paper.pdf
 ```
 
 The script prints a Markdown-formatted summary document to the console — a TL;DR followed by a per-section abstractive summary in the paper's original order.
+
+## Evaluation
+
+Summary quality is measured with **ROUGE against author-written abstracts** across 20 arXiv papers (cs.CL). The abstract is deleted from the input before summarization, so no system is ever scored against text it was given.
+
+Reproduce it with two commands — the evaluation is completely independent of `main.py`:
+
+```bash
+python fetch_papers.py   # downloads 20 arXiv PDFs + their abstracts (once)
+python evaluate.py       # scores the pipeline, writes data/results.csv + results.md
+```
+
+### Results
+
+20/20 papers extracted successfully. Reference abstracts average 198 words.
+
+| System | ROUGE-1 F | ROUGE-1 P | ROUGE-1 R | ROUGE-2 F | ROUGE-Lsum F | Avg words |
+|---|---|---|---|---|---|---|
+| **This pipeline** | **0.3268** | **0.4779** | 0.2535 | **0.0987** | **0.3023** | 107 |
+| lead-3 baseline | 0.2000 | 0.4025 | 0.1399 | 0.0440 | 0.1773 | 74 |
+| extractive-only | 0.3709 | 0.2747 | 0.6150 | 0.1064 | 0.3390 | 466 |
+
+**vs. lead-3** (first 3 sentences of the introduction — the standard summarization baseline, and a notoriously strong one on arXiv): the pipeline wins by **+12.7 ROUGE-1 points on all 20 of 20 papers**, with more than double the ROUGE-2. It wins on precision *and* recall simultaneously, so the gap is not a length artifact. 95% CIs do not overlap: [0.298, 0.356] vs [0.181, 0.219].
+
+**vs. extractive-only** (the top-ranked chunks emitted verbatim, no summarization step): extractive scores higher on F, but only by emitting **2.4× the reference length** — it buys recall of 0.615 while its precision falls to 0.275. The pipeline's precision is **74% higher**. This comparison is the reason the results table reports precision and recall rather than F alone.
+
+Both baselines are computed by [src/evaluation.py](src/evaluation.py), which uses Google's `rouge-score` with Porter stemming and newline-delimited sentences (required for `rougeLsum` to compute summary-level LCS rather than silently degrading to plain `rougeL`).
+
+**Known limitation:** summaries average 107 words against 198-word references, which structurally caps recall near 0.25.
 
 ## Configuration
 
@@ -69,10 +97,17 @@ All tunable parameters (chunk size, model choice, summary length caps, etc.) liv
 
 ```
 research-paper-summarizer/
-├── main.py
+├── main.py              # summarize one PDF
+├── fetch_papers.py      # build the 20-paper evaluation corpus from arXiv
+├── evaluate.py          # score the pipeline with ROUGE
 ├── requirements.txt
 ├── README.md
 ├── .gitignore
+├── data/
+│   ├── references.json  # gold abstracts (committed)
+│   ├── results.csv      # per-paper, per-system scores
+│   ├── results.md       # summary table
+│   └── papers/          # downloaded PDFs (gitignored)
 └── src/
 	├── __init__.py
 	├── config.py
@@ -81,15 +116,13 @@ research-paper-summarizer/
 	├── chunking.py
 	├── ranking.py
 	├── summarization.py
-	└── aggregation.py
+	├── aggregation.py
+	└── evaluation.py     # ROUGE scoring + baselines
 ```
 
-- `main.py`: Entry point that runs the full pipeline.
+- `main.py`: Entry point that runs the full pipeline on a single PDF.
+- `evaluate.py` / `fetch_papers.py`: The evaluation harness, runnable independently of `main.py`.
 - `src/`: Contains all processing modules.
-
-## Roadmap
-
-- Quantitative evaluation of summary quality via ROUGE scoring.
 
 ## Notes
 
