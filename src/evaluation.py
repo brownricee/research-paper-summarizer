@@ -57,6 +57,9 @@ def extractive_baseline(ranked_chunks, top_n=4):
 
     return " ".join([chunk["text"] for chunk in top_chunks])
 
+# This block runs solely when the file is executed directly
+# (python -m src.evaluation) as a quick check that rouge-score is installed and
+# wired up correctly.
 if __name__ == "__main__":
     target = "The quick brown fox jumped over the lazy dog."
     prediction = "The agile brown fox jumped over the lazy dog."
